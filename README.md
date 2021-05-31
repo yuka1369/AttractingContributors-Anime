@@ -21,6 +21,6 @@ https://github.com/raux/AttractingContributors-Anime (Anime topic)
 https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 
 # List of Movie
-Mavel
-Tomorrow with yesterday's you
-DC
+1. Mavel
+2. Tomorrow with yesterday's you
+3. DC
