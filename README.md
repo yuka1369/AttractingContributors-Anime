@@ -10,3 +10,4 @@ under preparing...
 3. My Neighbor Totoro
 4. 百円の恋
 5. One Piece
+6. Doraemon
