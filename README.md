@@ -27,4 +27,5 @@ https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 4. Ratatouille
 5. The Princess Mononoke
 6. got father
+7. The Devotion of Suspect X
 
