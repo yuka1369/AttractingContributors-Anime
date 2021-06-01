@@ -28,4 +28,4 @@ https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 5. The Princess Mononoke
 6. got father
 7. The Devotion of Suspect X
-
+8. Black Panther
