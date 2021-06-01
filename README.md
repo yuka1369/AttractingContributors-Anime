@@ -20,5 +20,14 @@ https://github.com/raux/AttractingContributors-Anime (Anime topic)
 
 https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 
-# List of Movies
-9. La La Land
+# List of Movie
+1. Marvel
+2. Tomorrow with yesterday's you
+3. DC
+4. Ratatouille
+5. The Princess Mononoke
+6. got father
+7. The Devotion of Suspect X
+8. Black Panther
+9. Armageddon
+10. La La Land
