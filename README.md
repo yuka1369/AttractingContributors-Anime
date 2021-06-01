@@ -30,3 +30,4 @@ https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 7. The Devotion of Suspect X
 8. Black Panther
 9. Armageddon
+10. La La Land
