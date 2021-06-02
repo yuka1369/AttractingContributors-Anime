@@ -16,12 +16,13 @@ To complete the assignment, please do the following:
 4. Merge 10 Pull Requests into your forked Project.
 
 # Example. 
-https://github.com/raux/AttractingContributors-Anime (Anime topic)
-
-https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
+https://www.tsp21.com/movie/worldmoviealltime.html
 
 # List of Movie
+1. Detective conan.
+2. Godzilla: King of The Monsters
 1. Marvel
+1. My Neighbor Totoro
 2. Tomorrow with yesterday's you
 3. DC
 4. Ratatouille
