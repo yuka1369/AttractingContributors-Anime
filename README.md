@@ -20,3 +20,4 @@ Goal - I want contributors to help me list some video games.
 
 # List of video game.
 1. Battlefield5
+2. Minecraft
