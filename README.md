@@ -26,3 +26,4 @@ Goal - I want contributors to help me list some video games.
 5. STEINS;GATE
 6. Apex Legend
 7. Overwatch
+8. Tetris
