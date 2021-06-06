@@ -29,3 +29,4 @@ Goal - I want contributors to help me list some video games.
 8. Tetris
 9. Getting Over It with Bennett Foddy
 10. Dragon Quest V
+11. VALORANT
