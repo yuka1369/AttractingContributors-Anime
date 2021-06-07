@@ -35,4 +35,5 @@ For example, I'm glad to receive Line sticker at my birthday.
 12. Wine
 13. watch
 14. Tea
-15. juice
+15. earphones
+16. juice
