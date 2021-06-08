@@ -31,4 +31,6 @@ https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 8. SPY✖️Family
 9. Bam and Kero 
 10. Oshinoko 
+11. The Little Prince
+12. machine no owarini
 -----------------
