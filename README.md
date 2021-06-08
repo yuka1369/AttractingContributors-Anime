@@ -27,4 +27,9 @@ https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 4. tegami
 5. The little prince
 6. Le Comte de Monte-Cristo
-7. The Basics of Communicative Design (tsutawaru dezain no kihon)
+7. Harry Potter
+8. 10 Years With Mafalda
+9. Guri and Gura
+10. Biblia Koshodo no Jiken Techo
+11. Kokoro by Souseki Natsume
+12. The Basics of Communicative Design (tsutawaru dezain no kihon)
