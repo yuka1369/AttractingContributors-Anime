@@ -30,3 +30,5 @@ I want to know the name of your favorite Doraemon's Secret Tools. I'm looking fo
 9. PSYCHO-PASS
 10. one piece
 11. Tora Dora!
+12. Humanity Has Declined
+13. Mouryou no hako
