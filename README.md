@@ -31,4 +31,5 @@ please write url and title(expected)
 - ハイポーション作ってみた, https://www.nicovideo.jp/watch/sm1890440
 - ハイポーション作ってみた。,  https://www.nicovideo.jp/watch/sm1890440
 - イチローのレーザービームで人類滅亡, https://www.nicovideo.jp/watch/sm811361
-- Battlefield 2042 Official Reveal Trailer (ft. 2WEI), https://youtu.be/ASzOzrB-a9E
+- レッツゴー陰陽師,https://www.nicovideo.jp/watch/sm9  
+- Battlefield 2042 Official Reveal Trailer (ft. 2WEI), https://youtu.be/ASzOzrB-a9E  
