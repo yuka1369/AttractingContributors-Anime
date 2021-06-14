@@ -32,4 +32,5 @@ Goal - I want contributors to help me list some video games.
 11. VALORANT
 12. Atsumare Doubutsu No Mori
 13. Smash 　Brothers
-6. Apex Legend
+14. Apex Legend
+
