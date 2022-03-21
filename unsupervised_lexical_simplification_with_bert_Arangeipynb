@@ -1,0 +1,561 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "unsupervised_lexical_simplification_with_bert.ipynb のコピー",
+      "provenance": [],
+      "collapsed_sections": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/yuka1369/AttractingContributors-Book/blob/main/unsupervised_lexical_simplification_with_bert_Arangeipynb\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "7pWD5xb4L_JV"
+      },
+      "source": [
+        "# Unsupervised Lexical Simplification with BERT\n",
+        "## Overview\n",
+        "Lexical simplification aims to replace complex words in a given sentence with their simpler alternatives whlie preserve meaning.  This notebook performs lexical simplification with BERT following \"*A Simple BERT-Based Approach for Lexical Simplification*\" [1]. The proposed method is a very simple, but effective.   \n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "e1SFYlc3QsTw"
+      },
+      "source": [
+        "## Settings"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "vhYTBzUDQp8X",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "c9231f1b-4de0-4a21-e272-aadbd19ffb45"
+      },
+      "source": [
+        "#@title Setup environment\n",
+        "!pip install --quiet pytorch-transformers\n",
+        "!pip install --quiet pytorch-nlp\n",
+        "!pip install --quiet tqdm"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[K     |████████████████████████████████| 176 kB 7.3 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 132 kB 48.4 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 1.2 MB 54.3 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 895 kB 57.5 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 8.6 MB 18.1 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 79 kB 2.9 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 138 kB 39.4 MB/s \n",
+            "\u001b[K     |████████████████████████████████| 127 kB 48.8 MB/s \n",
+            "\u001b[31mERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\n",
+            "datascience 0.10.6 requires folium==0.2.1, but you have folium 0.8.3 which is incompatible.\u001b[0m\n",
+            "\u001b[K     |████████████████████████████████| 90 kB 286 kB/s \n",
+            "\u001b[?25h"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "kMCjFnONQvPR"
+      },
+      "source": [
+        "#@title Setup common imports\n",
+        "from collections import Counter\n",
+        "from tqdm import tqdm\n",
+        "import numpy as np\n",
+        "import torch\n",
+        "from pytorch_transformers import (\n",
+        "    BertTokenizer,\n",
+        "    BertForMaskedLM,\n",
+        ")\n",
+        "\n",
+        "import matplotlib.pyplot as plt\n",
+        "% matplotlib inline"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "A90nF_ctPVy_"
+      },
+      "source": [
+        "## Substitution Generation\n",
+        "We obtain substitution candidate...\n",
+        "<!-- Figure: The model architechture -->\n",
+        "\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Ape_pX4ARUKT",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "34e08693-7e68-4c97-f482-071a6e26033b"
+      },
+      "source": [
+        "# Build model\n",
+        "tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')\n",
+        "model = BertForMaskedLM.from_pretrained('bert-base-uncased')"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "100%|██████████| 231508/231508 [00:00<00:00, 949352.60B/s]\n",
+            "100%|██████████| 433/433 [00:00<00:00, 205004.36B/s]\n",
+            "100%|██████████| 440473133/440473133 [00:18<00:00, 23965929.29B/s]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "3P-4wiBxPX7S"
+      },
+      "source": [
+        "# Model's input\n",
+        "#text = \"[CLS] the cat perched on the mat [SEP] the cat perched on the mat [SEP]\"\n",
+        "\n",
+        "#text = \"[CLS] the man researches about NMT [SEP]  the man researches about NMT [SEP]\"\n",
+        "#text = \"[CLS] BLUE is a well-known evaluation method for translation studies. [SEP]  BLUE is a well-known evaluation method for translation studies. [SEP]\"\n",
+        "#text = \"[CLS] transformer is a well-known method for translation studies [SEP]  transformer is a well-known method for translation studies [SEP]\"\n",
+        "text = \"[CLS] the man researches about transform [SEP]  the man researches about transform [SEP]\"\n",
+        "\n",
+        "masked_idx = 11\n",
+        "#masked_idx = 10\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "gWo9CFXIRzmw",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "e9eab4db-acba-4698-cd23-7b16e7eaf525"
+      },
+      "source": [
+        "# Tokenize a text\n",
+        "tokenized_text = tokenizer.tokenize(text)\n",
+        "\n",
+        "print(tokenized_text)\n",
+        "\n",
+        "# Mask a complex token which should be substituted\n",
+        "complex_word = tokenized_text[masked_idx]\n",
+        "tokenized_text[masked_idx] = '[MASK]'\n",
+        "\n",
+        "# Convert inputs to PyTorch tensors\n",
+        "tokens_ids = tokenizer.convert_tokens_to_ids(tokenized_text)\n",
+        "#segments_ids = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]\n",
+        "segments_ids = [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]\n",
+        "#segments_ids = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0, 1, 1, 1, 1, 1, 1,1, 1, 1, 1, 1, 1]\n",
+        "tokens_tensor = torch.tensor([tokens_ids])\n",
+        "segments_tensors = torch.tensor([segments_ids])"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "['[CLS]', 'the', 'man', 'researches', 'about', 'transform', '[SEP]', 'the', 'man', 'researches', 'about', 'transform', '[SEP]']\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "QsyoSBm3SEJi"
+      },
+      "source": [
+        "# Predict a masked token\n",
+        "model.eval()\n",
+        "if torch.cuda.is_available():\n",
+        "    tokens_tensor = tokens_tensor.to('cuda')\n",
+        "    segments_tensors = segments_tensors.to('cuda')\n",
+        "    model.to('cuda')\n",
+        "with torch.no_grad():\n",
+        "    outputs = model(tokens_tensor, token_type_ids=segments_tensors)\n",
+        "    predictions = outputs[0]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "lSueDInYSSXO",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 459
+        },
+        "outputId": "cc18f97e-1ed7-4534-95e5-22c07b453cd6"
+      },
+      "source": [
+        "# Output top 10 of candidates\n",
+        "#topk_score, topk_index = torch.topk(predictions[0, masked_idx], 10)\n",
+        "topk_score, topk_index = torch.topk(predictions[0, masked_idx], 20)\n",
+        "topk_tokens = tokenizer.convert_ids_to_tokens(topk_index.tolist())\n",
+        "print(f'Input: {\" \".join(tokenized_text)}')\n",
+        "print(f'Top10: {topk_tokens}')\n",
+        "\n",
+        "# Visualize output probabilities\n",
+        "plt.bar(topk_tokens, torch.softmax(topk_score, 0).tolist())\n",
+        "plt.xticks(rotation=70)\n",
+        "plt.ylabel('Probability')\n",
+        "plt.show()"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Input: [CLS] the man researches about transform [SEP] the man researches about [MASK] [SEP]\n",
+            "Top10: ['.', ';', '?', '!', '|', '...', ':', 'and', ',', '।', '-', '[UNK]', 'you', '/', '॥', 'it', 'me', 'the', \"'\", 'that']\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "/usr/local/lib/python3.7/dist-packages/matplotlib/backends/backend_agg.py:214: RuntimeWarning: Glyph 2404 missing from current font.\n",
+            "  font.set_text(s, 0.0, flags=flags)\n",
+            "/usr/local/lib/python3.7/dist-packages/matplotlib/backends/backend_agg.py:214: RuntimeWarning: Glyph 2405 missing from current font.\n",
+            "  font.set_text(s, 0.0, flags=flags)\n",
+            "/usr/local/lib/python3.7/dist-packages/matplotlib/backends/backend_agg.py:183: RuntimeWarning: Glyph 2404 missing from current font.\n",
+            "  font.set_text(s, 0, flags=flags)\n",
+            "/usr/local/lib/python3.7/dist-packages/matplotlib/backends/backend_agg.py:183: RuntimeWarning: Glyph 2405 missing from current font.\n",
+            "  font.set_text(s, 0, flags=flags)\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<Figure size 432x288 with 1 Axes>"
+            ],
+            "image/png": "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\n"
+          },
+          "metadata": {
+            "needs_background": "light"
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "FVPajT4APaA1"
+      },
+      "source": [
+        "## Substitution Ranking\n",
+        "Previous section, we obtained subsitution candidates of a complex word \"*perched*\".  \n",
+        "In this section, we rank substitution candidates by following four features:\n",
+        "\n",
+        "- Probability of BERT prediction;\n",
+        "- Probability of n-gram language model;\n",
+        "- Similarity obtained by FastText;\n",
+        "- Word frequency;\n",
+        "\n",
+        "We choose the top of candidate with the highest average rank over all features as the simplification replacement.\n",
+        "\n",
+        "In this notebook, we use only a **probabitity of BERT predicaiton** and a **word frequency** for ranking step."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "8BNPz8jrUysR",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "9f007ec6-d25b-4264-c8a3-f1bd6e469ca3"
+      },
+      "source": [
+        "#@title Download the Children's Book Test (CBT)\n",
+        "!wget http://www.thespermwhale.com/jaseweston/babi/CBTest.tgz\n",
+        "!tar -xzf ./CBTest.tgz\n",
+        "!DATA_PATH=./CBTest/data; cat ${DATA_PATH}/cbt_train.txt ${DATA_PATH}/cbt_valid.txt ${DATA_PATH}/cbt_test.txt > ./cbt_all.txt\n",
+        "!wc ./cbt_all.txt"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "--2022-03-15 08:59:04--  http://www.thespermwhale.com/jaseweston/babi/CBTest.tgz\n",
+            "Resolving www.thespermwhale.com (www.thespermwhale.com)... 50.31.160.191\n",
+            "Connecting to www.thespermwhale.com (www.thespermwhale.com)|50.31.160.191|:80... connected.\n",
+            "HTTP request sent, awaiting response... 200 OK\n",
+            "Length: 120547669 (115M) [application/x-tar]\n",
+            "Saving to: ‘CBTest.tgz’\n",
+            "\n",
+            "CBTest.tgz          100%[===================>] 114.96M  11.2MB/s    in 11s     \n",
+            "\n",
+            "2022-03-15 08:59:15 (10.9 MB/s) - ‘CBTest.tgz’ saved [120547669/120547669]\n",
+            "\n",
+            "tar: Ignoring unknown extended header keyword 'LIBARCHIVE.creationtime'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'LIBARCHIVE.creationtime'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'LIBARCHIVE.creationtime'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'LIBARCHIVE.creationtime'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.dev'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.ino'\n",
+            "tar: Ignoring unknown extended header keyword 'SCHILY.nlink'\n",
+            "  292912  6135083 28453805 ./cbt_all.txt\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "RHHukcMobWyz",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "33680130-e6f3-4f4d-d653-59c79a3ab26d"
+      },
+      "source": [
+        "#@title Build a table of word frequency\n",
+        "def count_lines(path):\n",
+        "  with open(path, 'r') as f:\n",
+        "    return sum([1 for _ in f])\n",
+        "\n",
+        "word_frequency = Counter()\n",
+        "filepath = './cbt_all.txt'\n",
+        "n_lines = count_lines(filepath)\n",
+        "with open(filepath, 'r') as f:\n",
+        "  for line in tqdm(f, total=n_lines):\n",
+        "    if line.startswith(\"_BOOK_TITLE_\"):\n",
+        "      continue\n",
+        "    else:\n",
+        "      tokens = tokenizer.tokenize(line.rstrip())\n",
+        "      for token in tokens:\n",
+        "        word_frequency[token] += 1"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "100%|██████████| 292912/292912 [02:17<00:00, 2123.07it/s]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "R2zj_Ow9u4ch"
+      },
+      "source": [
+        "# substitution ranking\n",
+        "bert_rank = np.array([i for i in range(len(topk_tokens))])\n",
+        "frequency_rank = np.argsort([-word_frequency[token] for token in topk_tokens])\n",
+        "avg_rank = np.argsort((bert_rank + frequency_rank) / 2)\n",
+        "\n",
+        "# sort candidates and except a complex word\n",
+        "candidates = [topk_tokens[i] for i in avg_rank if topk_tokens[i] != complex_word]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sR1gcnLxwZeC",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "ac37ba66-827f-4205-e520-644a429c4472"
+      },
+      "source": [
+        "tokenized_text[masked_idx] = candidates[0]\n",
+        "print(\" \".join(tokenized_text))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "[CLS] the man researches about transform [SEP] the man researches about ? [SEP]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "hzOHx9T-QgDV"
+      },
+      "source": [
+        "## References\n",
+        "\n",
+        "[1] [A Simple BERT-Based Approach for Lexical Simplification\n",
+        "](https://arxiv.org/abs/1907.06226)  \n",
+        "[2] [huggingface/transformers](https://github.com/huggingface/transformers)\n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "›"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 135
+        },
+        "id": "OO2XpLAtH7Gd",
+        "outputId": "3200fbce-7b34-4b41-f64a-f13ee2decc93"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "SyntaxError",
+          "evalue": "ignored",
+          "traceback": [
+            "\u001b[0;36m  File \u001b[0;32m\"<ipython-input-12-c3c772c949fd>\"\u001b[0;36m, line \u001b[0;32m1\u001b[0m\n\u001b[0;31m    ›\u001b[0m\n\u001b[0m    ^\u001b[0m\n\u001b[0;31mSyntaxError\u001b[0m\u001b[0;31m:\u001b[0m invalid character in identifier\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
