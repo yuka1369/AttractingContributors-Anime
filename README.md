@@ -33,3 +33,4 @@ https://github.com/NAIST-SE/AttractingContributors/discussions/4 (Discussion)
 10. Biblia Koshodo no Jiken Techo
 11. Kokoro by Souseki Natsume
 12. The Basics of Communicative Design (tsutawaru dezain no kihon)
+13. Meditations by Marcus Aurelius
